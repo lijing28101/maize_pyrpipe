@@ -126,7 +126,7 @@ if not dm.check_index(dindex):
 	dm.build_index(workingDir+"/uniprot_sprot.fasta", "dindex", out_dir=workingDir, threads=20)
 
 diamond_out="maize_diamond_out"
-#dm.run_align(workingDir+"/transcripts.fa", diamond_out, command="blastx", out_fmt=6, fmt_string="qseqid sseqid evalue pident", out_dir=workingDir, threads=25, objectid='diamond', **{"--more-sensitive":""})
+dm.run_align(workingDir+"/transcripts.fa", diamond_out, command="blastx", out_fmt=6, fmt_string="qseqid sseqid evalue pident", out_dir=workingDir, threads=25, objectid='diamond', **{"--more-sensitive":""})
 
 #find tx which are not in diamond match
 matches=set()
