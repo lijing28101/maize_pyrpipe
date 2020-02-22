@@ -4,3 +4,4 @@ pyrpipe_logs/*
 *.log
 *.LOG
 *.pyc
+fasterq.tmp*

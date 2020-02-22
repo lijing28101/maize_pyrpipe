@@ -4,12 +4,12 @@ from pyrpipe import pyrpipe_engine as pe
 import sys
 
 
-#maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
-maizeRun=['SRR1573523','SRR999058']
+maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
+#maizeRun=['SRR1573523','SRR999058']
 workingDir="maize_out"
 if not pu.check_paths_exist(workingDir):
     pu.mkdir(workingDir)
-"""
+
 #Genome files	
 GENOME=workingDir+"/Zm-B73-REFERENCE-NAM-5.0.fa"
 if not pu.check_files_exist(GENOME):
@@ -118,7 +118,7 @@ mergedGTF=st.stringtie_merge(*gtfList,**{"-p":"16"})
 tx_file=workingDir+"/transcripts.fa"
 cmd="gffread -w "+tx_file+" -g "+GENOME+" "+mergedGTF
 pe.execute_command(cmd.split(" "),verbose=False,quiet=False,logs=True,command_name="gffread")
-"""
+
 dindex=workingDir+"/dindex"
 dm=tools.Diamond(index=dindex)
 if not dm.check_index(dindex):
