@@ -1,0 +1,6 @@
+maize_out/*
+__pycache__
+pyrpipe_logs/*
+*.log
+*.LOG
+*.pyc
