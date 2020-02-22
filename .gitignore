@@ -5,3 +5,4 @@ pyrpipe_logs/*
 *.LOG
 *.pyc
 fasterq.tmp*
+*.swp
