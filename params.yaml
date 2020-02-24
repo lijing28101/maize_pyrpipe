@@ -1,0 +1,23 @@
+bbduk:
+        ktrim: r
+        k: '23'
+        mink: '11'
+        qtrim : "'rl'"
+        trimq : '10'
+        ref: 'adapters2.fa'
+        --:
+                - '-Xmx2g'
+
+hisat2:
+        --dta-cufflinks: ""
+        -p: "16"
+
+stringtie1:
+        -p: "16"
+        -m: "150"
+
+stringtie2:
+        -p: "16"
+        -m: "150"
+        -e: ""
+        -A: output.abundance
