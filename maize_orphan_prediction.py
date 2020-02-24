@@ -1,11 +1,11 @@
-from pyrpipe import sra,mapping,assembly,qc,tools
+from pyrpipe import sra,mapping,assembly,qc,tools,quant
 from pyrpipe import pyrpipe_utils as pu
 from pyrpipe import pyrpipe_engine as pe
 import sys
+from gffutils.iterators import DataIterator
 
-
-maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
-#maizeRun=['SRR1573523','SRR999058']
+#maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
+maizeRun=['SRR1573523','SRR999058']
 workingDir="maize_out"
 if not pu.check_paths_exist(workingDir):
     pu.mkdir(workingDir)
@@ -42,9 +42,10 @@ for ob in sraObjects:
           print("Error")
           raise Exception("Fastq files not found")
 
+"""
 # sra to fastq and quality trim
 pathToAdapters="adapters2.fa"
-bbdOpts={"ktrim":"r","k":"23","mink":"11","qtrim":"'rl'","trimq":"10","--":("-Xmx2g",),"ref":pathToAdapters}
+bbdOpts={"ktrim":"r","k":"23","mink":"11","qtrim":"'rl'","trimq":"10","--":("-Xmx10g",),"ref":pathToAdapters}
 bbdOb=qc.BBmap(**bbdOpts)
 for ob in sraObjects:
     ob.perform_qc(bbdOb)
@@ -91,7 +92,7 @@ gtfList=[]
 i=0
 for bam in bamList:
     print("Processing:"+bam)
-    gtfList.append(st.perform_assembly(bam,objectid=sraObjects[i].srr_accession,**{"-m":"150","-p":"16"}))
+    gtfList.append(st.perform_assembly(bam,objectid=sraObjects[i].srr_accession,**{"-m":"50","-p":"28"}))
     i+=1
 
 print("Final GTFs:"+",".join(gtfList))
@@ -99,9 +100,33 @@ print("Final GTFs:"+",".join(gtfList))
 mergedGTF=st.stringtie_merge(*gtfList,**{"-p":"16"})
 
 
-tx_file=workingDir+"/transcripts.fa"
-cmd="gffread -w "+tx_file+" -g "+GENOME+" "+mergedGTF
-pe.execute_command(cmd.split(" "),verbose=False,quiet=False,logs=True,command_name="gffread")
+myGTF = mergedGTF
+myFasta = GENOME
+
+#not the fastest method
+toWrite=[]
+i=0
+for feature in DataIterator(myGTF):
+        if feature.featuretype == "transcript":
+		print('processing gtf...')
+                txName=feature.attributes['transcript_id'][0]
+                gene=feature.attributes['gene_id'][0]
+                thisSeq=">"+txName+" gene="+gene+" chr="+feature.seqid+" len="+str(len(feature))
+                toWrite.append(thisSeq)
+                toWrite.append(feature.sequence(myFasta))
+                i+=1
+
+f=open(workingDir+"/transcripts.fa","w")
+f.write("\n".join(toWrite))
+print("{} seq written".format(len(toWrite)/2))
+"""
+
+
+#start diamond
+c1="wget ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz -O "+workingDir+"/uniprot_sprot.fasta.gz"
+pe.execute_command(c1.split(),logs=False)
+c2="gunzip "+workingDir+"/uniprot_sprot.fasta.gz"
+pe.execute_command(c2.split(),logs=False)
 
 dindex=workingDir+"/dindex"
 dm=tools.Diamond(index=dindex)
@@ -157,19 +182,54 @@ print("Orphan transcripts written to {}".format(workingDir+"/orphan_transcripts.
 
 #make blastdb
 mkdb='makeblastdb -in '+ workingDir+"/uniprot_sprot.fasta"+' -dbtype prot -parse_seqids -out '+ workingDir+'/blastdb'
-pe.execute(mkdb.split(),logs=True)
-blastOut=workingDir+'/bout'
+#pe.execute_command(mkdb.split(),logs=True)
+blastOut=workingDir+'/blastout'
 blastdb=workingDir+'/blastdb'
 query=workingDir+"/orphan_transcripts.fa"
-blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut
+blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut+' -evalue 1.0e-5'
+#pe.execute_command(blastcmd.split())
 
 
 #find final orphans from blast results
+blastmatches=set()
+with open(blastOut) as f:
+	blastres=f.read().splitlines()
+for l in blastres:
+	blastmatches.add(l.split('\t')[0])
+
+unm=matches.difference(blastmatches)
+print("Orphans after blastxs: {}.".format(len(unm)))
+
+#extract final orphans
+#use Biopython for more efficient handling of seq data
+towrite=""
+writeF=False
+for l in lines:
+	if ">" in l:
+		thisq=l.split()[0].split(">")[1]
+		if thisq in unm:
+			writeF=True
+		else:
+			writeF=False
+	if writeF:
+		towrite+=l+"\n"
+
+f=open(workingDir+"/orphan_transcripts_final.fa","w")
+f.write(towrite)
+f.close()
+print("Orphan transcripts written to {}".format(workingDir+"/orphan_transcripts_final.fa"))
+
+
+#quantify expression with salmon
+sl=quant.Salmon(salmon_index="")
+sl.build_index(index_path=workingDir+"/salmonIndex",index_name="salIndex",fasta=workingDir+"/transcripts.fa")
+
+for ob in sraObjects:
+	sl.perform_quant(ob)
 
 
 
 
-#get expression of orphans
 
 
 
