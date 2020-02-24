@@ -96,24 +96,8 @@ for bam in bamList:
 
 print("Final GTFs:"+",".join(gtfList))
 
-#filepath=workingDir+"/gtflist.txt"
-#f=open("gtflist.txt","w")
-#f.write("\n".join(gtfList))
-#f.close()
-
 mergedGTF=st.stringtie_merge(*gtfList,**{"-p":"16"})
 
-#GTF=workingDir+"/gtflist_stringtieMerge.gtf"
-#st2=assembly.Stringtie(reference_gtf=GTF)
-#gtfList2=[]
-#i=0
-#for bam in bamList:
-#    abundance=workingDir+"/"+sraObjects[i].srr_accession+"/"+sraObjects[i].srr_accession+"_abundance.tab"
-#    print("Processing:"+bam)
-#    gtfList2.append(st2.perform_assembly(bam,objectid=sraObjects[i].srr_accession,out_suffix="_MergedST",**{"-p":"16","-e":"","-A":abundance}))
-#    i+=1
-
-#print("Final GTFs:"+",".join(gtfList2))
 
 tx_file=workingDir+"/transcripts.fa"
 cmd="gffread -w "+tx_file+" -g "+GENOME+" "+mergedGTF
@@ -167,5 +151,26 @@ f=open(workingDir+"/orphan_transcripts.fa","w")
 f.write(towrite)
 f.close()
 print("Orphan transcripts written to {}".format(workingDir+"/orphan_transcripts.fa"))
+
+
+#use blastx with orphan transcripts for more sensitive results
+
+#make blastdb
+mkdb='makeblastdb -in '+ workingDir+"/uniprot_sprot.fasta"+' -dbtype prot -parse_seqids -out '+ workingDir+'/blastdb'
+pe.execute(mkdb.split(),logs=True)
+blastOut=workingDir+'/bout'
+blastdb=workingDir+'/blastdb'
+query=workingDir+"/orphan_transcripts.fa"
+blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut
+
+
+#find final orphans from blast results
+
+
+
+
+#get expression of orphans
+
+
 
 
