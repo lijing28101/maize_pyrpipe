@@ -6,3 +6,4 @@ pyrpipe_logs/*
 *.pyc
 fasterq.tmp*
 *.swp
+submaize.sh
