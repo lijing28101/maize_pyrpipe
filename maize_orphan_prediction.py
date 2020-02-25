@@ -4,8 +4,8 @@ from pyrpipe import pyrpipe_engine as pe
 import sys
 from gffutils.iterators import DataIterator
 
-#maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
-maizeRun=['SRR1573523','SRR999058']
+maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
+#maizeRun=['SRR1573523','SRR999058']
 workingDir="maize_out"
 if not pu.check_paths_exist(workingDir):
     pu.mkdir(workingDir)
@@ -42,7 +42,6 @@ for ob in sraObjects:
           print("Error")
           raise Exception("Fastq files not found")
 
-"""
 # sra to fastq and quality trim
 pathToAdapters="adapters2.fa"
 bbdOpts={"ktrim":"r","k":"23","mink":"11","qtrim":"'rl'","trimq":"10","--":("-Xmx10g",),"ref":pathToAdapters}
@@ -108,7 +107,7 @@ toWrite=[]
 i=0
 for feature in DataIterator(myGTF):
         if feature.featuretype == "transcript":
-		print('processing gtf...')
+                print('processing gtf...')
                 txName=feature.attributes['transcript_id'][0]
                 gene=feature.attributes['gene_id'][0]
                 thisSeq=">"+txName+" gene="+gene+" chr="+feature.seqid+" len="+str(len(feature))
@@ -119,7 +118,7 @@ for feature in DataIterator(myGTF):
 f=open(workingDir+"/transcripts.fa","w")
 f.write("\n".join(toWrite))
 print("{} seq written".format(len(toWrite)/2))
-"""
+
 
 
 #start diamond
@@ -182,12 +181,12 @@ print("Orphan transcripts written to {}".format(workingDir+"/orphan_transcripts.
 
 #make blastdb
 mkdb='makeblastdb -in '+ workingDir+"/uniprot_sprot.fasta"+' -dbtype prot -parse_seqids -out '+ workingDir+'/blastdb'
-#pe.execute_command(mkdb.split(),logs=True)
+pe.execute_command(mkdb.split(),logs=True)
 blastOut=workingDir+'/blastout'
 blastdb=workingDir+'/blastdb'
 query=workingDir+"/orphan_transcripts.fa"
 blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut+' -evalue 1.0e-5'
-#pe.execute_command(blastcmd.split())
+pe.execute_command(blastcmd.split())
 
 
 #find final orphans from blast results
@@ -197,7 +196,9 @@ with open(blastOut) as f:
 for l in blastres:
 	blastmatches.add(l.split('\t')[0])
 
-unm=matches.difference(blastmatches)
+print("Blast matches: ",len(blastmatches))
+
+unm=unm.difference(blastmatches)
 print("Orphans after blastxs: {}.".format(len(unm)))
 
 #extract final orphans
