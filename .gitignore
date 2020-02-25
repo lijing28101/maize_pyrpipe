@@ -7,3 +7,4 @@ pyrpipe_logs/*
 fasterq.tmp*
 *.swp
 submaize.sh
+slurm*
