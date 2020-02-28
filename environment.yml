@@ -1,8 +1,8 @@
 name: maizeorphan
 channels:
-  - conda-forge
-  - anaconda
   - bioconda
+  - anaconda
+  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -26,6 +26,8 @@ dependencies:
   - intel-openmp=2020.0=166
   - krb5=1.17.1=h173b8e3_0
   - ld_impl_linux-64=2.33.1=h53a641e_7
+  - libblas=3.8.0=14_mkl
+  - libcblas=3.8.0=14_mkl
   - libcurl=7.68.0=h20c2e04_0
   - libdeflate=1.2=h516909a_1
   - libedit=3.1.20181209=hc058e9b_0
@@ -33,6 +35,7 @@ dependencies:
   - libgcc-ng=9.1.0=hdf63c60_0
   - libgfortran-ng=7.3.0=hdf63c60_0
   - libiconv=1.15=h516909a_1005
+  - liblapack=3.8.0=14_mkl
   - libssh2=1.8.2=h1ba5d50_0
   - libstdcxx-ng=9.1.0=hdf63c60_0
   - libxml2=2.9.10=hee79883_0
@@ -41,9 +44,10 @@ dependencies:
   - mkl_fft=1.0.15=py36ha843d7b_0
   - mkl_random=1.1.0=py36hd6b4f25_0
   - ncurses=6.1=he6710b0_1
+  - numpy=1.18.1=py36h95a1406_0
   - numpy-base=1.18.1=py36hde5b4d6_1
   - openjdk=8.0.152=h7b6447c_2
-  - openssl=1.1.1=h7b6447c_0
+  - openssl=1.1.1d=h7b6447c_4
   - pcre=8.43=he6710b0_0
   - perl=5.26.2=h14c3975_0
   - perl-app-cpanminus=1.7044=pl526_1
@@ -117,6 +121,7 @@ dependencies:
   - salmon=1.1.0=hf69c8f4_0
   - samtools=1.9=h10a08f8_12
   - setuptools=45.2.0=py36_0
+  - simplejson=3.17.0=py36h516909a_0
   - six=1.14.0=py36_0
   - sqlite=3.31.1=h7b6447c_0
   - sra-tools=2.8.0=0
@@ -152,7 +157,6 @@ dependencies:
     - matplotlib==3.1.1
     - multiqc==1.8
     - networkx==2.4
-    - numpy==1.18.1
     - pandas==1.0.1
     - pillow==7.0.0
     - pycparser==2.19
@@ -165,7 +169,6 @@ dependencies:
     - requests==2.23.0
     - scipy==1.4.1
     - seaborn==0.10.0
-    - simplejson==3.17.0
     - spectra==0.0.11
     - tinycss2==1.0.2
     - urllib3==1.25.8
