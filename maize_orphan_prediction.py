@@ -185,7 +185,7 @@ pe.execute_command(mkdb.split(),logs=True)
 blastOut=workingDir+'/blastout'
 blastdb=workingDir+'/blastdb'
 query=workingDir+"/orphan_transcripts.fa"
-blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut+' -evalue 1.0e-5'
+blastcmd='blastx -max_target_seqs 5 -num_threads 28 -query '+query+' -outfmt 6 -db '+blastdb+' -out '+ blastOut+' -evalue 1.0e-2'
 pe.execute_command(blastcmd.split())
 
 
