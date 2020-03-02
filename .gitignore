@@ -8,3 +8,4 @@ fasterq.tmp*
 *.swp
 submaize.sh
 slurm*
+*.fa
