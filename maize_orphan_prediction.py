@@ -5,7 +5,7 @@ import sys
 from gffutils.iterators import DataIterator
 
 maizeRun=['SRR1573523','SRR999058','SRR520999','SRR1168424','SRR1621015','SRR3084882','SRR1620828','SRR3053545','SRR1620949','SRR1620947']
-maizeRun=['SRR1573523','SRR999058']
+#maizeRun=['SRR1573523','SRR999058']
 workingDir="maize_out"
 if not pu.check_paths_exist(workingDir):
     pu.mkdir(workingDir)
