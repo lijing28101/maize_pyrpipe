@@ -45,14 +45,14 @@ for ob in sraObjects:
 # sra to fastq and quality trim
 pathToAdapters="adapters2.fa"
 bbdOpts={"ktrim":"r","k":"23","mink":"11","qtrim":"'rl'","trimq":"10","--":("-Xmx10g",),"ref":pathToAdapters}
-bbdOb=qc.BBmap(**bbdOpts)
+bbdOb=qc.BBmap(threads=10)
 for ob in sraObjects:
-    ob.perform_qc(bbdOb)
+    ob.perform_qc(bbdOb,**bbdOpts)
 
 
 # run hisat2
 hsOpts={"--dta-cufflinks":"","-p":"16"}
-hs=mapping.Hisat2(hisat2_index=workingDir+"/maizeIndex/maizeInd",**hsOpts)
+hs=mapping.Hisat2(index=workingDir+"/maizeIndex/maizeInd")
 hisat2_buildArgs={"-p":"16","-a":"","-q":""}
 
 if hs.check_index():
@@ -68,13 +68,13 @@ else:
 samList=[]
 for ob in sraObjects:
     print("Processing {}...".format(ob.srr_accession))
-    thisSam=hs.perform_alignment(ob,**{"-p":"16"}) 
+    thisSam=hs.perform_alignment(ob,**hsOpts) 
     if thisSam:
         samList.append(thisSam)
 print("Alignment done!! Sam files:"+ ",".join(samList))
 
 #sam to sorted bam
-samOb=tools.Samtools(**{"-@":"16"})
+samOb=tools.Samtools(threads=20)
 bamList=[]
 i=0
 for sam in samList:
@@ -91,12 +91,12 @@ gtfList=[]
 i=0
 for bam in bamList:
     print("Processing:"+bam)
-    gtfList.append(st.perform_assembly(bam,objectid=sraObjects[i].srr_accession,**{"-m":"50","-p":"28"}))
+    gtfList.append(st.perform_assembly(bam,objectid=sraObjects[i].srr_accession,**{"-m":"50"}))
     i+=1
 
 print("Final GTFs:"+",".join(gtfList))
 
-mergedGTF=st.stringtie_merge(*gtfList,**{"-p":"16"})
+mergedGTF=st.stringtie_merge(*gtfList)
 
 
 myGTF = mergedGTF
@@ -105,9 +105,9 @@ myFasta = GENOME
 #not the fastest method
 toWrite=[]
 i=0
+print('processing gtf...')
 for feature in DataIterator(myGTF):
         if feature.featuretype == "transcript":
-                print('processing gtf...')
                 txName=feature.attributes['transcript_id'][0]
                 gene=feature.attributes['gene_id'][0]
                 thisSeq=">"+txName+" gene="+gene+" chr="+feature.seqid+" len="+str(len(feature))
@@ -129,7 +129,7 @@ pe.execute_command(c2.split(),logs=False)
 
 dindex=workingDir+"/dindex"
 dm=tools.Diamond(index=dindex)
-if not dm.check_index(dindex):
+if not dm.check_index():
 	print("Building diamond index")
 	dm.build_index(workingDir+"/uniprot_sprot.fasta", "dindex", out_dir=workingDir, threads=20)
 
@@ -222,7 +222,7 @@ print("Orphan transcripts written to {}".format(workingDir+"/orphan_transcripts_
 
 
 #quantify expression with salmon
-sl=quant.Salmon(salmon_index="")
+sl=quant.Salmon(salmon_index="",threads=20)
 sl.build_index(index_path=workingDir+"/salmonIndex",index_name="salIndex",fasta=workingDir+"/transcripts.fa")
 
 for ob in sraObjects:

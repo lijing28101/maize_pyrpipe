@@ -162,7 +162,6 @@ dependencies:
     - pycparser==2.19
     - pyparsing==2.4.6
     - pyphen==0.9.5
-    - pyrpipe==0.0.3
     - python-dateutil==2.8.1
     - pytz==2019.3
     - pyyaml==5.3
