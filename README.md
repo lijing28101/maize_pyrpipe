@@ -8,3 +8,7 @@
 ### Run analysis
 `python maize_orphan_prediction.py`
 
+or with snakemake by
+
+`snakemake -j Nthreads`
+
