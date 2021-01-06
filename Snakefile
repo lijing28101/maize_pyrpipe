@@ -1,10 +1,10 @@
 import yaml
 import sys
 import os
-from pyrpipe import sra,qc,mapping,tools,assembly
+from pyrpipe import sra,qc,mapping,tools,assembly,quant
 from pyrpipe import pyrpipe_utils as pu
 from pyrpipe import pyrpipe_engine as pe
-
+from pyrpipe.runnable import Runnable
 
 ####Read config#####
 configfile: "config.yaml"
@@ -32,7 +32,7 @@ with open ("SRRids.txt") as f:
 
 #######Read Params###########
 with open('params.yaml') as file:
-        documents = yaml.full_load(file)
+       documents = yaml.full_load(file)
 
 ##bbduk
 bbduk_params=documents['bbduk']
@@ -40,103 +40,47 @@ bbduk_params=documents['bbduk']
 ##hisat2
 hisat2_params=documents['hisat2']
 
-##StringTie1##
-stringtie1_params=documents['stringtie1']
-
-##StringTie2##
-stringtie2_params=documents['stringtie2']
+##StringTie##
+stringtie_params=documents['stringtie']
 
 
 #####create objects######
 
-#SRA
-SOBJS={}
-for s in SRR:
-        SOBJS[s]=sra.SRA(s,DIR)
-        #OBLIST.append(sra.SRA(s,DIR))
-
 ##BBDUK##
 BBDUK=qc.BBmap(**bbduk_params)
 ##HISAT2##
-HISAT=mapping.Hisat2(hisat2_index="hisat_index/maizeInd",**hisat2_params)
+HISAT=mapping.Hisat2(index="maize_out/maizeIndex/maizeInd",**hisat2_params)
 if not HISAT.check_index():
         #build hisat2 index
         pu.print_green("Building Hisat2 index")
-        HISAT.build_index("hisat_index","maizeInd",GENOME,**{"-p":"16","-a":"","-q":""})
-##SAMTOOLS
-ST=tools.Samtools(**{"-@":str(THREADS)})
+        HISAT.build_index("maizeIndex","maizeInd",GENOME,**{"-p":"16","-a":"","-q":""})
 
 ##StringTie1##
-STIE1=assembly.Stringtie(**stringtie1_params)
+ST=assembly.Stringtie(**stringtie_params)
 
 
 rule all:
         input:
-                #expand("{wd}/{sample}/{sample}_1_bbduk.fastq",sample=SRR,wd=DIR,num=[1,2]),
-                #expand("{wd}/{sample}/{sample}_2_bbduk.fastq",sample=SRR,wd=DIR,num=[1,2])
-                #expand("{wd}/{sample}/{sample}_hisat2.sam",sample=SRR,wd=DIR,num=[1,2])
-                #expand("{wd}/{sample}/{sample}_hisat2_sorted_stringtie1.gtf",sample=SRR,wd=DIR,num=[1,2]),
-                #expand("{wd}/{sample}/{sample}_hisat2_sorted_stringtie_merged.gtf",sample=SRR,wd=DIR,num=[1,2]),
-                #expand("{wd}/transcripts.fa",wd=DIR,num=[1,2]),
-                expand("{wd}/maize.vioplot.jpeg",wd=DIR,num=[1,2])
+                expand("{wd}/{sample}/{sample}_hisat2_sorted_stringtie_merged.gtf",sample=SRR,wd=DIR),
+                expand("{wd}/transcripts.fa",wd=DIR),
+                expand("{wd}/blastout.txt",wd=DIR),
+                expand("{wd}/orphan.id",wd=DIR),
+                expand("{wd}/orphan_transcripts_final.fa",wd=DIR),
+                expand("{wd}/salmon_index",wd=DIR),
+                expand("{wd}/{sample}/salmon_out/quant.sf",wd=DIR,sample=SRR)
 
-
-rule download:
-        output:
-                f1="{wd}/{sample}/{sample}_1_bbduk.fastq",
-                f2="{wd}/{sample}/{sample}_2_bbduk.fastq"
-                #fid="{sample}"
-
-
-        threads: THREADS
-
-        run:
-                fqfile=str(output.f1)
-                srr=pu.get_file_basename(fqfile).split("_")[0]
-                SOBJS[srr].download_fastq(procs=int(threads))
-                SOBJS[srr].perform_qc(BBDUK,deleteRawFastq=False)
-
-rule hisat:
-        input:
-                "{wd}/{sample}/{sample}_1_bbduk.fastq",
-                "{wd}/{sample}/{sample}_2_bbduk.fastq"
-
-        output:
-                sam="{wd}/{sample}/{sample}_hisat2.sam"
-
-        threads: THREADS
-
-        run:
-                samfile=str(output.sam)
-                srr=pu.get_file_basename(samfile).split("_")[0]
-                HISAT.perform_alignment(SOBJS[srr],**{"-p":str(threads)})
-
-rule samtoBam:
-        input:
-                sam="{wd}/{sample}/{sample}_hisat2.sam"
-        output:
-                bam="{wd}/{sample}/{sample}_hisat2_sorted.bam"
-        threads: THREADS
-        run:
-                print({input.sam})
-                bamf=str({output.bam})
-                samf=str({input.sam})
-                srr=pu.get_file_basename(bamf).split("_")[0]
-                ST.sam_sorted_bam(input.sam,delete_sam=True,delete_bam=True,objectid=srr)
-
-
-rule stringtie1:
-        input:
-                bam="{wd}/{sample}/{sample}_hisat2_sorted.bam"
+                
+rule process:
         output:
                 gtf="{wd}/{sample}/{sample}_hisat2_sorted_stringtie.gtf"
 
         threads: THREADS
 
         run:
-                f=str(output.gtf)
-                srr=pu.get_file_basename(f).split("_")[0]
-                STIE1.perform_assembly(input.bam,objectid=srr)
+                gtffile=str(output.gtf)
+                srrid=gtffile.split("/")[1]
+                sra.SRA(srrid,directory=DIR).trim(BBDUK).align(HISAT).assemble(ST)
+
 
 rule create_GTFlist:
         input:
@@ -157,23 +101,7 @@ rule stringtieMerge:
 
         run:
                 STMERGE=assembly.Stringtie()
-                STMERGE.stringtie_merge(input.gtflist,**{"-p":"16"})
-
-rule stringtie2:
-        input:
-                bam="{wd}/{sample}/{sample}_hisat2_sorted.bam",
-                mergedgtf="{wd}/gtflist_stringtieMerge.gtf"
-        output:
-                gtf="{wd}/{sample}/{sample}_hisat2_sorted_stringtie_merged.gtf",
-                abundance="{wd}/{sample}/{sample}_abundance.tab"
-
-        threads: THREADS
-
-        run:
-                f=str(output.gtf)
-                srr=pu.get_file_basename(f).split("_")[0]
-                STIE2=assembly.Stringtie(reference_gtf=input.mergedgtf,**stringtie2_params)
-                STIE2.perform_assembly(input.bam,out_suffix="_stringtie_merged",objectid=srr)
+                STMERGE.run(input.gtflist,subcommand='--merge',**{'-p':"16",'-o':output.mergedgtf})
 
 
 rule gffread:
@@ -182,31 +110,74 @@ rule gffread:
         output:
                 transcripts="{wd}/transcripts.fa"
 
-        threads: THREADS
+        shell:
+                "gffread -w {output.transcripts} -g {GENOME} {input.mergedgtf}"
+
+
+rule blast:
+        input:
+                transcripts="{wd}/transcripts.fa",
+                target="{wd}/uniprot_sprot.fasta"
+        output:
+                blastout="{wd}/blastout.txt"
 
         run:
-                cmd="gffread -w {wd}/transcripts.fa -g maize_out/Zm-B73-REFERENCE-NAM-5.0.fa {wd}/gtflist_stringtieMerge.gtf"
-                pe.execute_command(cmd.split(" "),verbose=False,quiet=False,logs=True,command_name="gffread")
-
+                blastdb=Runnable(command='makeblastdb')
+                dbparams={'-in':input.target,'-dbtype':"prot",'-parse_seqids':"",'-out':"{wd}/blastdb"}
+                blastdb.run(**dbparams)
+                blastx=Runnable(command='blastx')
+                blastparams={'-max_target_seqs':"5",'-num_threads':"16",'-query':input.transcripts,'-outfmt':"6",'-db':"{wd}/blastdb",'-out':output.blastout,'-evalue':"0.001"}
+                blastx.run(**blastparams)
 
 
 rule get_orphan:
         input:
                 transcripts="{wd}/transcripts.fa",
-                target="{wd}/combined.faa"
+                blastout="{wd}/blastout.txt"
         output:
-                orphan="{wd}/orphan.summary",
-                nonorphan="{wd}/non.orphan.summary"
+                orphanid="{wd}/orphan.id"
 
         shell:
-                "{wd}/blast.sh"
+                """
+                grep ">" {input.transcripts} | cut -f1 -d" " | sed 's/>//' > {DIR}/id.all
+                cut -f1 {input.blastout} | sort -u > {DIR}/nonorphan.id
+                cat {DIR}/id.all {DIR}/nonorphan.id | sort | uniq -u > {output.orphanid}
+                """
 
-rule summary:
+
+rule get_orphanFa:
         input:
-                orphan="{wd}/orphan.summary",
-                nonorphan="{wd}/non.orphan.summary"
+               transcripts="{wd}/transcripts.fa",
+               orphanid="{wd}/orphan.id"
         output:
-                "{wd}/maize.vioplot.jpeg"
+               orphanFa="{wd}/orphan_transcripts_final.fa"
 
         shell:
-                "Rscript DIR/plot.R"
+               "seqtk subseq {input.transcripts} {input.orphanid} > {output.orphanFa}"
+
+
+rule salmon_index:
+        input:
+                transcripts="{wd}/transcripts.fa"
+        output:
+                index=directory("{wd}/salmon_index")
+
+        run:
+                salmon=quant.Salmon(index=output.index,transcriptome=input.transcripts,threads=16)
+
+
+rule salmon:
+        input:
+                index="{wd}/salmon_index"
+        output:
+                quant_file="{wd}/{sample}/salmon_out/quant.sf"
+
+        run:
+                salmon=quant.Salmon(index=input.index,threads=16)
+                outfile=str(output.quant_file)
+                srrid=outfile.split("/")[1]
+                sra.SRA(srrid,directory=DIR).quant(salmon)
+
+
+
+              
