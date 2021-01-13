@@ -50,11 +50,6 @@ stringtie_params=documents['stringtie']
 BBDUK=qc.BBmap(**bbduk_params)
 ##HISAT2##
 HISAT=mapping.Hisat2(index="maize_out/maizeIndex/maizeInd",**hisat2_params)
-if not HISAT.check_index():
-        #build hisat2 index
-        pu.print_green("Building Hisat2 index")
-        HISAT.build_index("maizeIndex","maizeInd",GENOME,**{"-p":"16","-a":"","-q":""})
-
 ##StringTie1##
 ST=assembly.Stringtie(**stringtie_params)
 
